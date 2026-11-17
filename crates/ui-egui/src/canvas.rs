@@ -2332,8 +2332,19 @@ fn sync_view_to_document(app: &PhotocraftApp, ctx: &egui::Context, view: &mut Vi
     }
     // View › Pixel Aspect Ratio Correction: document pixels are shown this much wider.
     let aspect = app.ui.view.display_aspect();
-    if view.fit_pending && rect.width() > 50.0 {
+    // A fit nobody has moved since follows the canvas size: a document made while its panel was still
+    // opening (Workbench) is framed once the panel has its size, not left small or off to one side.
+    let area = [rect.width(), rect.height()];
+    if let Some((fit_area, zoom, center)) = view.fitted {
+        if (view.zoom, view.center) != (zoom, center) {
+            view.fitted = None;
+        } else if fit_area != area {
+            view.fit_pending = true;
+        }
+    }
+    if view.fit_pending && rect.width() > 50.0 && rect.height() > 50.0 {
         fit_view(view, doc, rect.size(), ppp, aspect);
+        view.fitted = Some((area, view.zoom, view.center));
     }
     if view.fill_pending && rect.width() > 50.0 {
         fill_view(view, doc, rect.size(), ppp, aspect);

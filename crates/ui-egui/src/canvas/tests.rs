@@ -3993,3 +3993,30 @@ fn an_armed_eyedropper_hides_no_cursor_on_a_secondary_canvas() {
     assert_eq!(cursor(&mut app, true), egui::CursorIcon::None, "the primary canvas hides the icon under the pipette it draws");
     assert_ne!(cursor(&mut app, false), egui::CursorIcon::None, "a secondary canvas keeps a cursor");
 }
+
+/// Workbench: a document made while its panel was still opening was fitted to the small panel and left
+/// small, off in a corner of the full one. A fit nobody has moved since follows the canvas size.
+#[test]
+fn an_untouched_fit_follows_the_canvas_size() {
+    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    app.run("file.new", json!({"width": 1200, "height": 800})).unwrap();
+    app.sync_views();
+    let doc = app.session.active().unwrap().doc.clone();
+    let ctx = egui::Context::default();
+    let mut view = app.ui.views[0].clone();
+    let at = |w: f32, h: f32| Rect::from_min_size(pos2(0.0, 0.0), vec2(w, h));
+    // Too small to fit into yet (a panel still opening): the fit waits.
+    sync_view_to_document(&app, &ctx, &mut view, &doc, at(300.0, 20.0), 2.0);
+    assert!(view.fit_pending);
+    sync_view_to_document(&app, &ctx, &mut view, &doc, at(225.0, 300.0), 2.0);
+    let small = view.zoom;
+    assert_eq!(view.center, [600.0, 400.0]);
+    // The panel opens fully: fitted again, centred.
+    sync_view_to_document(&app, &ctx, &mut view, &doc, at(1000.0, 700.0), 2.0);
+    assert!(view.zoom > small * 3.0, "{} after {small}", view.zoom);
+    assert_eq!(view.center, [600.0, 400.0]);
+    // Once someone zooms, a resize keeps their camera.
+    view.zoom = 0.5;
+    sync_view_to_document(&app, &ctx, &mut view, &doc, at(800.0, 600.0), 2.0);
+    assert_eq!(view.zoom, 0.5);
+}

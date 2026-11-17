@@ -213,6 +213,10 @@ pub struct View {
     pub(crate) display_camera: Option<(f32, [f32; 2])>,
     #[serde(skip)]
     pub(crate) zoom_transition: Option<ZoomTransition>,
+    /// The canvas size (points), zoom and centre of the last fit: while the camera is still that fit, a
+    /// canvas that changes size fits again, so a document made while its panel was opening ends up framed.
+    #[serde(skip)]
+    pub(crate) fitted: Option<([f32; 2], f32, [f32; 2])>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -248,6 +252,7 @@ impl Default for View {
             zoom_anchor: None,
             display_camera: None,
             zoom_transition: None,
+            fitted: None,
         }
     }
 }

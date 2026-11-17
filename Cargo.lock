@@ -1382,6 +1382,20 @@ version = "0.1.0"
 source = "git+https://github.com/storytold/craft-libs?rev=fe6b443acf3eccaf514064812e6e6bf24257652a#fe6b443acf3eccaf514064812e6e6bf24257652a"
 
 [[package]]
+name = "craft-embed"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "egui",
+ "egui-wgpu",
+ "log",
+ "png 0.18.1",
+ "pollster 0.4.0",
+ "raw-window-handle",
+ "wgpu",
+]
+
+[[package]]
 name = "craft-eps"
 version = "0.1.0"
 source = "git+https://github.com/storytold/craft-libs?rev=fe6b443acf3eccaf514064812e6e6bf24257652a#fe6b443acf3eccaf514064812e6e6bf24257652a"
@@ -5678,6 +5692,20 @@ dependencies = [
  "photocraft-geom",
  "photocraft-raster",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "photocraft-embed"
+version = "0.23.1"
+dependencies = [
+ "craft-embed",
+ "eframe",
+ "egui",
+ "photocraft-doc",
+ "photocraft-engine",
+ "photocraft-io",
+ "photocraft-ui-egui",
  "serde_json",
 ]
 

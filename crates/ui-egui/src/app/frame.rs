@@ -28,7 +28,8 @@ impl PhotocraftApp {
     pub(crate) fn home_screen_up(&mut self) -> bool {
         let opening = !self.jobs.opens.is_empty();
         let n = self.session.documents().len();
-        !opening && self.ui.chrome.shows_home(n, self.session.prefs().general.auto_show_home_screen)
+        // Hands off draws only the image canvas: no Home in its place (Home's state still advances).
+        !opening && self.ui.chrome.shows_home(n, self.session.prefs().general.auto_show_home_screen) && !self.ui.hands_off
     }
 
     /// Shared logic body. A wrapping host owns the final reset tail after its own work.
@@ -293,25 +294,28 @@ impl PhotocraftApp {
         if chrome {
             self.ui.panels.full_screen_chrome = false;
         }
+        // Hands off (`view.handsOff`): only the image canvas; dialogs and notices still show.
+        let hands_off = self.ui.hands_off;
         // In Full Screen Mode, Tab shows the menu bar, options bar, toolbar and dock (#6760).
-        let tabbed_in = !chrome && self.ui.panels.full_screen_chrome;
-        if (chrome || tabbed_in) && self.ui.panels.menu_bar {
+        let tabbed_in = !chrome && self.ui.panels.full_screen_chrome && !hands_off;
+        let chrome_shown = chrome && !hands_off;
+        if (chrome_shown || tabbed_in) && self.ui.panels.menu_bar {
             panels::title_bar(self, ui);
         }
         // Home is only the menu bar and the Home content; the saved panel prefs are untouched.
         let home = self.home_screen_up();
-        if ((chrome && self.ui.panels.options_bar) || tabbed_in) && !home {
+        if ((chrome_shown && self.ui.panels.options_bar) || tabbed_in) && !home {
             panels::options_bar(self, ui);
         } else {
             // Its Fill help modal is gone with the bar: do not let a stale flag hold the crop's keys.
             panels::options_bar::close_fill_help(ui.ctx());
         }
-        if chrome && self.ui.panels.status_bar && !home {
+        if chrome_shown && self.ui.panels.status_bar && !home {
             panels::status_bar(self, ui);
         }
-        let toolbar_shown = ((chrome && self.ui.panels.toolbar) || tabbed_in) && !home;
+        let toolbar_shown = ((chrome_shown && self.ui.panels.toolbar) || tabbed_in) && !home;
         // craft-ui's layout holds the canvas as its protected `canvas` panel.
-        let docking = ((chrome && self.ui.panels.dock) || tabbed_in) && !home;
+        let docking = ((chrome_shown && self.ui.panels.dock) || tabbed_in) && !home;
         let toolbar_side = self.ui.panels.toolbar_side.resolve();
         let toolbar_right = toolbar_side == crate::state::ToolbarSide::Right;
         // The compact layout stacks the dock, rail and toolbar on the dock's physical edge.
@@ -344,14 +348,14 @@ impl PhotocraftApp {
                 egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
                     canvas::document_area(self, ui);
                 });
-                if !home {
+                if !home && !hands_off {
                     panels::properties_window(self, &ctx);
                 }
             }
         }
         // The floating editor windows belong to the editor: Home covers them (dialogs and notices
-        // below stay).
-        if !home {
+        // below stay), and so does hands off.
+        if !home && !hands_off {
             brush_panel::window(self, &ctx);
             preset_panels::windows(self, &ctx);
             gradient_ui::editor_window(self, &ctx);
@@ -360,7 +364,9 @@ impl PhotocraftApp {
             timeline_ui::windows(self, &ctx);
             workspace_ui::windows(self, &ctx);
         }
-        palette::show(self, &ctx);
+        if !hands_off {
+            palette::show(self, &ctx);
+        }
         dialogs::show(self, &ctx);
         layers_panel_ui::show_dialog(self, &ctx);
         rasterize_prompt::run_pending(self, &ctx);

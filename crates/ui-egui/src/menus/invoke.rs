@@ -58,6 +58,8 @@ fn keeps_box_drag(id: &str) -> bool {
         "view.screenMode.cycle",
         "view.darkenInterface",
         "view.lightenInterface",
+        "view.workbench",
+        "view.handsOff",
     ];
     VIEW.contains(&id) || ["window.panel.", "window.toggle.", "type.panels."].iter().any(|prefix| id.starts_with(prefix))
 }
@@ -714,6 +716,26 @@ fn invoke_view_command(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, p
     match id {
         "view.zoomIn" | "view.zoomOut" | "view.fitOnScreen" | "view.actualPixels" => Some(app.run(id, params.clone())),
         "view.editSelectedGuides" => Some(crate::new_guide_ui::open_edit(app).map(|_| Value::Null)),
+        // Workbench's look (palette, square corners, its accent); `on` absent toggles it.
+        "view.workbench" => Some((|| {
+            let on = params.get("on").and_then(Value::as_bool).unwrap_or(crate::theme::workbench_accent().is_none());
+            let accent = match params.get("accent") {
+                None | Some(Value::Null) => None,
+                Some(v) => Some(v.as_str().and_then(crate::theme::parse_hex).ok_or("accent must be a \"#rrggbb\" colour")?),
+            };
+            let accent = accent.or_else(crate::theme::workbench_accent).unwrap_or(crate::theme::WORKBENCH_ACCENT);
+            crate::theme::set_workbench(on.then_some(accent));
+            let kind = app.ui.theme;
+            app.apply_theme(ctx, kind);
+            ctx.request_repaint();
+            Ok(json!({"on": on}))
+        })()),
+        // Hands off: only the image canvas; `on` absent toggles it.
+        "view.handsOff" => {
+            app.ui.hands_off = params.get("on").and_then(Value::as_bool).unwrap_or(!app.ui.hands_off);
+            ctx.request_repaint();
+            Some(Ok(json!({"on": app.ui.hands_off})))
+        }
         "view.clearSelectedGuides" => {
             Some(crate::guide_select::delete_selected(app).and_then(|done| if done { Ok(Value::Null) } else { Err("No guide is selected".to_string()) }))
         }

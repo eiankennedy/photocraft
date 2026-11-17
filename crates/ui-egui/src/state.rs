@@ -500,6 +500,11 @@ pub struct UiState {
     /// View / Window / Type preferences: screen mode, Extras, Show and Snap To, flip, arrangement.
     #[serde(default)]
     pub view: crate::view_cmds::ViewOptions,
+    /// Hands off: only the image canvas is drawn (no title bar, menus, options bar, toolbar,
+    /// docked or floating panels, document tabs, Home or status bar), for when an agent does the
+    /// work and the person watches. Dialogs still appear. Set with `view.handsOff`.
+    #[serde(default)]
+    pub hands_off: bool,
     pub panels: Panels,
     /// Views per open document (index-aligned with the session's documents).
     pub views: Vec<View>,
@@ -691,6 +696,7 @@ impl Default for UiState {
             shape_box: None,
             selected_path: None,
             hidden_work_path: None,
+            hands_off: false,
             panels: Panels::default(),
             views: Vec::new(),
             dialogs: Vec::new(),

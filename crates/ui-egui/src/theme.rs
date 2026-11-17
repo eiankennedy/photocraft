@@ -22,6 +22,40 @@ use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId,
 use photocraft_engine::prefs::UiFontSize;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+/// Workbench's look (dark, flat, its mode's accent) when PhotoCraft runs inside Workbench's panel:
+/// 0 = off, else `0x01RRGGBB`. Set by the `view.workbench` command; [`apply`] and [`Tokens::get`]
+/// honour it, so every panel follows.
+static WORKBENCH: AtomicU32 = AtomicU32::new(0);
+
+/// Workbench's default accent (its orange).
+pub const WORKBENCH_ACCENT: Color32 = Color32::from_rgb(0xFF, 0x60, 0x00);
+
+/// Turn Workbench's look on with an accent colour, or off with `None`. Takes effect at the next
+/// [`apply`].
+pub fn set_workbench(accent: Option<Color32>) {
+    let v = accent.map_or(0, |c| 0x0100_0000 | (u32::from(c.r()) << 16) | (u32::from(c.g()) << 8) | u32::from(c.b()));
+    WORKBENCH.store(v, Ordering::Relaxed);
+}
+
+/// The accent Workbench set, when its look is on.
+pub fn workbench_accent() -> Option<Color32> {
+    let v = WORKBENCH.load(Ordering::Relaxed);
+    let [_, r, g, b] = v.to_be_bytes();
+    (v != 0).then(|| Color32::from_rgb(r, g, b))
+}
+
+/// `#rrggbb` to a colour.
+pub fn parse_hex(s: &str) -> Option<Color32> {
+    let h = s.strip_prefix('#')?;
+    if h.len() != 6 || !h.is_ascii() {
+        return None;
+    }
+    let n = u32::from_str_radix(h, 16).ok()?;
+    let [_, r, g, b] = n.to_be_bytes();
+    Some(Color32::from_rgb(r, g, b))
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ThemeKind {
@@ -766,7 +800,68 @@ impl Tokens {
 
     /// Tokens for the active theme (stored in egui's context data by [`apply`]).
     pub fn get(ctx: &egui::Context) -> Tokens {
-        ctx.data(|d| d.get_temp::<Tokens>(egui::Id::unique("photocraft-theme"))).unwrap_or_else(|| Tokens::for_kind(ThemeKind::Studio))
+        ctx.data(|d| d.get_temp::<Tokens>(egui::Id::unique("photocraft-theme"))).unwrap_or_else(|| Tokens::active(ThemeKind::Studio))
+    }
+
+    /// The tokens [`apply`] uses for `kind`: Workbench's palette while its look is on, else the theme's.
+    pub fn active(kind: ThemeKind) -> Tokens {
+        match workbench_accent() {
+            Some(accent) => Tokens::workbench(kind, accent),
+            None => Tokens::for_kind(kind),
+        }
+    }
+
+    /// Workbench's palette: near-black surfaces, hairline borders, warm white text, square corners
+    /// and its mode's accent. The layout (Pro or Studio) stays that of `base`, since the panels'
+    /// arrangement follows the chosen theme's.
+    pub fn workbench(base: ThemeKind, accent: Color32) -> Tokens {
+        let rgb = |v: u32| {
+            let [_, r, g, b] = v.to_be_bytes();
+            Color32::from_rgb(r, g, b)
+        };
+        let pro = base.is_pro();
+        let dark = Tokens::for_kind(ThemeKind::Pro);
+        let selected = rgb(0x26272A);
+        Tokens {
+            kind: if pro { ThemeKind::Pro } else { ThemeKind::Studio },
+            chrome: rgb(0x121316),
+            canvas: rgb(0x060607),
+            canvas_dot: rgb(0x060607),
+            dock: rgb(0x121316),
+            card: rgb(0x18191C),
+            card_border: rgb(0x333436),
+            field: rgb(0x060607),
+            field_border: rgb(0x333436),
+            hover: rgb(0x1C1D20),
+            pressed: selected,
+            text: rgb(0xF2F1EE),
+            text_dim: rgb(0x989998),
+            text_faint: rgb(0x838485),
+            icon: rgb(0xF2F1EE),
+            accent,
+            accent_soft: if pro { selected } else { Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), 64) },
+            accent_border: accent,
+            accent_text: Color32::WHITE,
+            separator: rgb(0x2A2B2D),
+            shadow: Color32::from_black_alpha(150),
+            primary_bg: accent,
+            primary_text: Color32::WHITE,
+            danger: dark.danger,
+            warning: dark.warning,
+            radius_sm: 0.0,
+            radius: 0.0,
+            radius_lg: 0.0,
+            bevel: false,
+            pro,
+            round_chips: false,
+            tab_strip: if pro { rgb(0x121316) } else { Color32::TRANSPARENT },
+            row_selected: if pro { selected } else { Color32::TRANSPARENT },
+            histogram_bg: rgb(0x060607),
+            histogram_level: dark.histogram_level,
+            caption_close: dark.caption_close,
+            caption_close_text: dark.caption_close_text,
+            scrim: dark.scrim,
+        }
     }
 
     /// Thin RGB outlines; the filled bands use the same hues with subdued coverage.
@@ -1020,7 +1115,7 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind) {
     // Keep native windows at SystemDefault so macOS continues reporting OS appearance changes,
     // including when an integration or restored egui state pinned its own theme preference.
     ctx.set_theme(egui::ThemePreference::System);
-    let t = Tokens::for_kind(kind);
+    let t = Tokens::active(kind);
     ctx.data_mut(|d| d.insert_temp(egui::Id::unique("photocraft-theme"), t));
     let mut v = if t.dark() { Visuals::dark() } else { Visuals::light() };
     v.panel_fill = t.chrome;

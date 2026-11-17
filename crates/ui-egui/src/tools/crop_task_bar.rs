@@ -30,9 +30,10 @@ fn frame_on_screen(app: &PhotocraftApp, xf: &ViewXform) -> Option<egui::Rect> {
     Some(egui::Rect::from_points(&pts))
 }
 
-/// The bar shows: the Crop tool with a frame, the Window toggle on, no dialog over the canvas.
+/// The bar shows: the Crop tool with a frame, the Window toggle on, no dialog over the canvas,
+/// not hands off (`view.handsOff` shows only the image).
 fn wanted(app: &PhotocraftApp) -> bool {
-    app.ui.tool == Tool::Crop && app.ui.panels.context_task_bar && app.ui.dialogs.is_empty() && app.session.active().is_some()
+    app.ui.tool == Tool::Crop && app.ui.panels.context_task_bar && app.ui.dialogs.is_empty() && app.session.active().is_some() && !app.ui.hands_off
 }
 
 /// Whether the bar can show now: [`wanted`] and a crop frame. `ui.inspect` checks it, so a bar

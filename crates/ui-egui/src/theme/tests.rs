@@ -362,3 +362,23 @@ fn breeze_themes_parse_and_meet_text_contrast() {
         assert!(contrast(t.caption_close_text, t.caption_close) >= 4.5, "{kind:?}: close button glyph");
     }
 }
+
+#[test]
+fn workbench_palette_is_dark_square_and_keeps_the_layout() {
+    assert_eq!(parse_hex("#FF6000"), Some(Color32::from_rgb(0xFF, 0x60, 0x00)));
+    for bad in ["", "#", "FF6000", "#FF600", "#FF60000", "#GG6000", "#ÿÿÿ"] {
+        assert_eq!(parse_hex(bad), None, "{bad}");
+    }
+    let accent = Color32::from_rgb(0x12, 0x34, 0x56);
+    for kind in ThemeKind::ALL {
+        let t = Tokens::workbench(kind, accent);
+        assert!(t.dark(), "{kind:?}");
+        assert_eq!(t.pro, kind.is_pro(), "{kind:?}");
+        assert_eq!(
+            (t.chrome, t.card, t.canvas, t.text),
+            (Color32::from_rgb(0x12, 0x13, 0x16), Color32::from_rgb(0x18, 0x19, 0x1C), Color32::from_rgb(6, 6, 7), Color32::from_rgb(0xF2, 0xF1, 0xEE))
+        );
+        assert_eq!((t.accent, t.primary_bg), (accent, accent));
+        assert_eq!((t.radius_sm, t.radius, t.radius_lg), (0.0, 0.0, 0.0));
+    }
+}

@@ -51,6 +51,10 @@ pub const SHELL_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
     // Photoshop's interface brightness shortcuts: step through the four Pro themes.
     ("view.darkenInterface", "Darken Interface", &[], Some("Cmd+Shift+F1")),
     ("view.lightenInterface", "Lighten Interface", &[], Some("Cmd+Shift+F2")),
+    // Workbench's panel: its look (`{on?: bool, accent?: "#rrggbb"}`) and Hands Off, only the
+    // image canvas (`{on?: bool}`).
+    ("view.workbench", "Workbench Look", &[], None),
+    ("view.handsOff", "Hands Off", &[], None),
     ("edit.freeTransformCopy", "Free Transform a Copy", &[], Some("Cmd+Alt+T")),
     ("type.editText", "Edit Type", &[], None),
     ("view.zoomIn", "Zoom In", &["View"], Some("Cmd+=")),

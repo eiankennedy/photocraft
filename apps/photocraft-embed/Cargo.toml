@@ -1,0 +1,24 @@
+[package]
+name = "photocraft-embed"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "PhotoCraft as a library Workbench hosts natively in its side panel (craft-embed)"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+photocraft-engine = { workspace = true }
+photocraft-ui-egui = { workspace = true }
+photocraft-io = { workspace = true }
+photocraft-doc = { workspace = true }
+egui = { workspace = true }
+# The desktop app's `eframe::App` impl is what this drives; `wgpu` for `Frame::wgpu_render_state`.
+eframe = { workspace = true, features = ["wgpu"] }
+serde_json = { workspace = true }
+craft-embed = { path = "../../../../crates/craft-embed" }
